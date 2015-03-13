@@ -5,11 +5,9 @@ Plugin URI: http://wordpress.ieonly.com/category/my-plugins/ez-backup/
 Author: Eli Scheetz
 Author URI: http://wordpress.ieonly.com/category/my-plugins/
 Description: Keep your database safe with scheduled backups. Multiple option for off-site backups also available.
-Version: 4.15.11
+Version: 4.15.12
 */
-//FOR DEBUGGING
-try {
-$GLOBALS["ez-backup"] = array("ver" => "4.15.11", "url" => admin_url("options-general.php?page=ez-backup-settings"), "mt" => array("included" => microtime(true)), "settings" => get_option("ez-backup-settings", array()));
+$GLOBALS["ez-backup"] = array("ver" => "4.15.12", "url" => admin_url("options-general.php?page=ez-backup-settings"), "mt" => array("included" => microtime(true)), "settings" => get_option("ez-backup-settings", array()));
 /*            ___
  *           /  /\     EZ Backup Main Plugin File
  *          /  /:/     @package EZ Backup
@@ -445,9 +443,6 @@ if (getWindowWidth(750) == 750)
 		global $wpdb;
 		ezbackup_set_backupdir();
 		ezbackup_display_header("EZ Backup Settings");
-//		print_r($GLOBALS["ez-backup"]["settings"]);
-//		settings_fields("ez-backup-settings");
-//		do_settings_sections("ez-backup-settings");
 		if (isset($_POST["ez-backup-settings"]["backup_method"]) && is_numeric($_POST["ez-backup-settings"]["backup_method"])) {
 			$GLOBALS["ez-backup"]["settings"]["backup_method"] = intval($_POST["ez-backup-settings"]["backup_method"]);
 			if (isset($_POST["ez-backup-settings"]["compress_backup"]))
@@ -596,10 +591,6 @@ if (getWindowWidth(750) == 750)
 				echo ezbackup_db2file($_REQUEST["ez-backup"]["db_date"]);
 		} elseif (isset($_GET['ez-backup-delete']) && is_file($delete = trailingslashit($GLOBALS["ez-backup"]["settings"]['backup_dir']).str_replace('/', '', str_replace('\\', '', $_GET['ez-backup-delete']))))
 			@unlink($delete);
-//		$db_backups = '<div id="makebackup" style="display: none;">';
-//				<select name="ez-backup[db_date]" id="db_date" onchange="if (this.value == \'RESTORE\') showhide(\'admin-model-popup\', true);">';
-//		foreach ($opts as $opt => $arr)
-//			$db_backups .= '<option value="'.$opt.'">'.(is_array($arr)?$opt:$arr).'</option>';
 		$sql_files = array();
 		if ($handle = opendir($GLOBALS["ez-backup"]["settings"]['backup_dir'])) {
 			while (false !== ($entry = readdir($handle)))
@@ -612,7 +603,6 @@ if (getWindowWidth(750) == 750)
 				foreach ($sql_files as $entry => $size)
 					$files .= "<li style='clear: left;'>($size) $entry<br />".ezbackup_link("Restore", "#restoreForm", "migrate", "", ' style="float: left;" onclick="document.getElementById(\'ezbackup_dbdate\').value=\''.$entry.'\'; showhide(\'admin-model-popup\', true);"').ezbackup_link("Download", "&ez-backup-download=$entry", "download", "", ' style="float: left; padding: 0 20px;" target="_blank"').ezbackup_link("DELETE", "&ez-backup-delete=$entry", "trash", "", ' style="float: left;"')."</li>\n";
 				$files .= "</ul>\n";
-//				$db_backups .= '<option value="RESTORE">RESTORE A Backup</option>';
 			} else
 				$files = "\n<b>No backups have yet been made</b>";
 		} else
@@ -626,14 +616,5 @@ if (getWindowWidth(750) == 750)
 		echo ezbackup_box("Database Backup Options", $db_opts.'<input type="submit" value="Save Settings" class="button-primary" style="float: right;"><br /></form>', "postbox", "admin-settings").ezbackup_box("Current Database Backups", "$files", "postbox", "menu")."</div></div></div><div id='admin-model-popup' style='display: none;'>$restoreForm$restoreFormEND</div>";
 	}
 
-	function ezbackup_admin_init() {
-		register_setting("ez-backup-settings", "ez-backup-settings");
-	}
-//	add_action("admin_init", "ezbackup_admin_init");
 
-}
-
-//FOR DEBUGGING
-} catch (Exception $e) {
-	die('Caught exception in: <pre>'.__FILE__."\nsixscan_common_is_partner_version() === FALSE\n".$e->getTraceAsString()."\n".print_r($_SERVER,1));
 }
