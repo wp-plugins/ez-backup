@@ -5,11 +5,11 @@ Plugin URI: http://wordpress.ieonly.com/category/my-plugins/ez-backup/
 Author: Eli Scheetz
 Author URI: http://wordpress.ieonly.com/category/my-plugins/
 Description: Keep your database safe with scheduled backups. Multiple option for off-site backups also available.
-Version: 4.15.10
+Version: 4.15.11
 */
 //FOR DEBUGGING
 try {
-$GLOBALS["ez-backup"] = array("ver" => "4.15.10", "url" => admin_url("options-general.php?page=ez-backup-settings"), "mt" => array("included" => microtime(true)), "settings" => get_option("ez-backup-settings", array()));
+$GLOBALS["ez-backup"] = array("ver" => "4.15.11", "url" => admin_url("options-general.php?page=ez-backup-settings"), "mt" => array("included" => microtime(true)), "settings" => get_option("ez-backup-settings", array()));
 /*            ___
  *           /  /\     EZ Backup Main Plugin File
  *          /  /:/     @package EZ Backup
@@ -33,40 +33,6 @@ $GLOBALS["ez-backup"] = array("ver" => "4.15.10", "url" => admin_url("options-ge
 
 if (isset($_SERVER["DOCUMENT_ROOT"]) && ($SCRIPT_FILE = str_replace($_SERVER["DOCUMENT_ROOT"], "", isset($_SERVER["SCRIPT_FILENAME"])?$_SERVER["SCRIPT_FILENAME"]:isset($_SERVER["SCRIPT_NAME"])?$_SERVER["SCRIPT_NAME"]:"")) && strlen($SCRIPT_FILE) > strlen("/".basename(__FILE__)) && substr(__FILE__, -1 * strlen($SCRIPT_FILE)) == substr($SCRIPT_FILE, -1 * strlen(__FILE__)))
 	die('You are not allowed to call this page directly.<p>You could try starting <a href="/">here</a>.');
-
-if (is_admin()) {// && current_user_can("activate_plugins")) {
-
-	function ezbackup_admin_notices() {
-		if (current_user_can("manage_options") && !(isset($GLOBALS["ez-backup"]["settings"]["backup_db"]) && is_array($GLOBALS["ez-backup"]["settings"]["backup_db"])) && !isset($_REQUEST["ez-backup-settings"]["backup_db"]["daily"]) && !isset($_REQUEST["ez-backup-settings"]["backup_db"]["hourly"]))
-			echo '<div class="update-nag">You have not yet configured any automatic backup jobs.<br />'.ezbackup_link("Go to EZ Backup Setting now and dismiss this message", "&ez-backup-settings[backup_db][daily]=0&ez-backup-settings[backup_db][hourly]=0").'</div>';
-	}
-	add_action("admin_notices", "ezbackup_admin_notices");
-
-	function ezbackup_install() {
-		global $wp_version;
-		if (version_compare($wp_version, "2.6", "<"))
-			die(__("Upgrade to %s now!", 'ezbackup'));
-	}
-	register_activation_hook(__FILE__, "ezbackup_install");
-
-	function ezbackup_deactivation() {
-		while (wp_next_scheduled('ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily')))
-			wp_clear_scheduled_hook('ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily'));
-		while (wp_next_scheduled('ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly')))
-			wp_clear_scheduled_hook('ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly'));
-	}
-	register_deactivation_hook(__FILE__, 'ezbackup_deactivation');
-
-	function ezbackup_activation() {
-		$GLOBALS["ez-backup"]["settings"] = get_option('ez-backup-settings', array());
-		if (isset($GLOBALS["ez-backup"]["settings"]["backup_db"]["daily"]) && $GLOBALS["ez-backup"]["settings"]["backup_db"]["daily"] && !wp_next_scheduled('ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily')))
-			wp_schedule_event(time(), 'daily', 'ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily'));
-		if (isset($GLOBALS["ez-backup"]["settings"]["backup_db"]["hourly"]) && $GLOBALS["ez-backup"]["settings"]["backup_db"]["hourly"] && !wp_next_scheduled('ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly')))
-			wp_schedule_event(time(), 'hourly', 'ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly'));
-	}
-	register_activation_hook(__FILE__, 'ezbackup_activation');
-
-}
 
 function ezbackup_set_backupdir() {
 	if (function_exists("current_user_can") && current_user_can("manage_options") && isset($_POST["ez-backup-settings"]["backup_dir"]) && is_dir($_POST["ez-backup-settings"]["backup_dir"]))
@@ -190,24 +156,9 @@ function ezbackup_db2file($date_format, $backup_type = "manual", $db_name = DB_N
 			if ((!isset($GLOBALS["ez-backup"]["settings"]["backup_method"]) || $GLOBALS["ez-backup"]["settings"]["backup_method"] != 1) && (!$return || $errors) && $GLOBALS["ez-backup"]["tmp"]["backup_file"] = fopen($backup_file, 'w')) {
 				$server = strtolower(isset($_SERVER["HTTP_HOST"])?$_SERVER["HTTP_HOST"]:(isset($_SERVER["SERVER_NAME"])?$_SERVER["SERVER_NAME"]:$_SERVER["SERVER_ADDR"]));
 				$ip = explode("$server", get_option("siteurl")."$server");
-				if (!(count($ip) == 3 && strlen(trim($ip[1], " \t\r\n/")) > 0))
-					$ip[1] = $_SERVER["SERVER_ADDR"];
-				fwrite($GLOBALS["ez-backup"]["tmp"]["backup_file"], '-- EZ Backup SQL dump '.$GLOBALS["ez-backup"]["ver"].', for '.$server.' ('.trim($ip[1]).')
---
--- Host: '.$db_host.'    Database: '.$db_name.'
--- ------------------------------------------------------
--- WordPress version '.$wp_version.'
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE=\'+00:00\' */;
-/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE=\'NO_AUTO_VALUE_ON_ZERO\' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;');
+				if (!(count($ip) > 2 && strlen($domain = trim($ip[1], " \t\r\n/")) > 0))
+					$domain = $_SERVER["SERVER_ADDR"];
+				fwrite($GLOBALS["ez-backup"]["tmp"]["backup_file"], "-- EZ Backup SQL dump ".$GLOBALS["ez-backup"]["ver"].", for $server ($domain)\n--\n-- Host: $db_host    Database: $db_name\n-- ------------------------------------------------------\n-- WordPress version $wp_version\n\n/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;\n/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;\n/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;\n/*!40101 SET NAMES utf8 */;\n/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;\n/*!40103 SET TIME_ZONE='+00:00' */;\n/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;\n/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;\n/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;\n/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;");
 				$sql = "show full tables where Table_Type = 'BASE TABLE'";
 				$result = mysql_query($sql);
 				$errors = "";
@@ -227,18 +178,7 @@ function ezbackup_db2file($date_format, $backup_type = "manual", $db_name = DB_N
 						mysql_free_result($result);
 					}
 				}
-				fwrite($GLOBALS["ez-backup"]["tmp"]["backup_file"], '
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
-
-/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
-/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
-/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
--- Dump completed on '.$db_date);
+				fwrite($GLOBALS["ez-backup"]["tmp"]["backup_file"], "\n/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;\n\n/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;\n/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;\n/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;\n/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;\n/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;\n/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;\n/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;\n\n-- Dump completed on $db_date");
 				fclose($GLOBALS["ez-backup"]["tmp"]["backup_file"]);
 				$return = "<div class='updated'>Backup: $subject Saved";
 				$message .= 'A database backup was saved on <a href="'.$GLOBALS["ez-backup"]["url"].'">'.(get_option("blogname"))."</a>.\r\n<p><pre>$errors</pre><p>";
@@ -326,6 +266,40 @@ function ezbackup_query($SQL) {
 
 if (is_admin()) {
 
+	function ezbackup_admin_notices() {
+		if (current_user_can("manage_options") && !isset($_REQUEST["ez-backup-settings"]["backup_db"]["daily"]) && !isset($_REQUEST["ez-backup-settings"]["backup_db"]["hourly"])) {$import_settings_array = get_option("ELISQLREPORTS_settings_array", array());
+			if (((isset($import_settings_array["daily_backup"]) && $import_settings_array["daily_backup"]) || (wp_next_scheduled('ELISQLREPORTS_daily_backup', array("Y-m-d-H-i-s", 'daily'))) || (isset($import_settings_array["hourly_backup"]) && $import_settings_array["hourly_backup"]) || (wp_next_scheduled('ELISQLREPORTS_hourly_backup', array("Y-m-d-H-i-s", 'hourly')))))
+				echo '<div class="update-nag">You have configured My SQL Reports plugin to perform automatic backup jobs. This feature will be phased out soon in lieu of My EZ Backup plugin running the same jobs.<br />'.ezbackup_link("Import the SQL Reports backup jobs into the EZ Backup Setting now and dismiss this message", "&ez-backup-settings[backup_db][daily]=".(isset($import_settings_array["daily_backup"])?$import_settings_array["daily_backup"]:"0")."&ez-backup-settings[backup_db][hourly]=".(isset($import_settings_array["hourly_backup"])?$import_settings_array["hourly_backup"]:"0")).'</div>';
+			elseif (!(isset($GLOBALS["ez-backup"]["settings"]["backup_db"]) && is_array($GLOBALS["ez-backup"]["settings"]["backup_db"])))
+				echo '<div class="update-nag">You have not yet configured any automatic backup jobs.<br />'.ezbackup_link("Go to EZ Backup Setting now and dismiss this message", "&ez-backup-settings[backup_db][daily]=0&ez-backup-settings[backup_db][hourly]=0").'</div>';
+		}
+	}
+	add_action("admin_notices", "ezbackup_admin_notices");
+
+	function ezbackup_install() {
+		global $wp_version;
+		if (version_compare($wp_version, "2.6", "<"))
+			die(__("Upgrade to %s now!", 'ezbackup'));
+	}
+	register_activation_hook(__FILE__, "ezbackup_install");
+
+	function ezbackup_deactivation() {
+		while (wp_next_scheduled('ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily')))
+			wp_clear_scheduled_hook('ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily'));
+		while (wp_next_scheduled('ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly')))
+			wp_clear_scheduled_hook('ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly'));
+	}
+	register_deactivation_hook(__FILE__, 'ezbackup_deactivation');
+
+	function ezbackup_activation() {
+		$GLOBALS["ez-backup"]["settings"] = get_option('ez-backup-settings', array());
+		if (isset($GLOBALS["ez-backup"]["settings"]["backup_db"]["daily"]) && $GLOBALS["ez-backup"]["settings"]["backup_db"]["daily"] && !wp_next_scheduled('ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily')))
+			wp_schedule_event(time(), 'daily', 'ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily'));
+		if (isset($GLOBALS["ez-backup"]["settings"]["backup_db"]["hourly"]) && $GLOBALS["ez-backup"]["settings"]["backup_db"]["hourly"] && !wp_next_scheduled('ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly')))
+			wp_schedule_event(time(), 'hourly', 'ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly'));
+	}
+	register_activation_hook(__FILE__, 'ezbackup_activation');
+
 	function ezbackup_enqueue_scripts() {
 		wp_enqueue_style('dashicons');
 	}
@@ -338,7 +312,7 @@ if (is_admin()) {
 			header('Content-Disposition: attachment; filename="'.$_GET["ez-backup-download"].'"');
 			header("Content-Length: ".filesize(trailingslashit($GLOBALS["ez-backup"]["settings"]["backup_dir"]).$_GET["ez-backup-download"]));
 			fpassthru($fp);
-			exit;
+			die();
 		}
 		add_options_page('EZ Backup Settings', '<span class="dashicons dashicons-backup" style="vertical-align: text-bottom;"></span> EZ Backup', "manage_options", "ez-backup-settings", "ezbackup_settings");
 	}
@@ -346,14 +320,14 @@ if (is_admin()) {
 
 	function ezbackup_set_plugin_action_links($links_array, $plugin_file) {
 		if (strlen($plugin_file) > 10 && $plugin_file == substr(__file__, (-1 * strlen($plugin_file))))
-			$links_array = array_merge(array('<a href="'.$GLOBALS["ez-backup"]["url"].'"><span class="dashicons dashicons-admin-generic" style="vertical-align: text-bottom;"></span>Settings</a>'), $links_array);
+			$links_array = array_merge(array(ezbackup_link("Settings", "#top_title", "admin-settings")), $links_array);
 		return $links_array;
 	}
 	add_filter("plugin_action_links", "ezbackup_set_plugin_action_links", 1, 2);
 
 	function ezbackup_set_plugin_row_meta($links_array, $plugin_file) {
 		if (strlen($plugin_file) > 10 && $plugin_file == substr(__file__, (-1 * strlen($plugin_file))))
-			$links_array = array_merge($links_array, array('<a target="_blank" href="https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=8VWNB5QEJ55TJ">Donate</a>'));
+			$links_array = array_merge($links_array, array(ezbackup_link("Donate", "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=8VWNB5QEJ55TJ", "heart")));
 		return $links_array;
 	}
 	add_filter("plugin_row_meta", "ezbackup_set_plugin_row_meta", 1, 2);
@@ -382,9 +356,9 @@ if (is_admin()) {
 		$Update_Link = '<div style="text-align: center;"><a href="';
 		$new_version = "";
 		$current = get_site_transient("update_plugins");
-		if (isset($current->response[__FILE__]->new_version)) {
-			$new_version = sprintf(__("Upgrade to %s now!", 'ezbackup'), $current->response[__FILE__]->new_version).'<br /><br />';
-			$Update_Link .= wp_nonce_url(self_admin_url('update.php?action=upgrade-plugin&plugin=').__FILE__, 'upgrade-plugin_'.__FILE__);
+		if (isset($current->response["ez-backup/index.php"]->new_version)) {
+			$new_version = sprintf(__("Upgrade to %s now!", 'ezbackup'), $current->response["ez-backup/index.php"]->new_version).'<br /><br />';
+			$Update_Link .= wp_nonce_url(self_admin_url('update.php?action=upgrade-plugin&plugin=ez-backup/index.php'), 'upgrade-plugin_ez-backup/index.php');
 		}
 		$Update_Link .= "\">$new_version</a></div>";
 		echo '<style>
@@ -396,9 +370,11 @@ if (is_admin()) {
 	.dashicons {text-decoration: none; vertical-align: middle; width: 20px; height: 20px;}
 	.dashicons-dismiss {color: #C00;}
 	.dashicons-dismiss:hover {color: #F00;}
+	.restore-steps li {font-size: 20px;}
+	.ez-backup-field-label {float: left; margin: 6px; text-align: right; width: 110px;}
+	.ez-backup-field-label input {width: 120px;}
 	.ez-backup-db-files li a {display: none;}
 	.ez-backup-db-files li:hover a {display: block;}
-	.ez-backup-field-label {width: 120px;}
 	.hndle {cursor: pointer; overflow: hidden; white-space: nowrap;}
 </style>
 	<h1 id="top_title"><span class="dashicons dashicons-backup" style="vertical-align: middle; width: 30px; height: 30px; font-size: 30px;"></span> '.$pTitle.'</h1>
@@ -482,27 +458,37 @@ if (getWindowWidth(750) == 750)
 			$GLOBALS["ez-backup"]["settings"]["backup_method"] = 0;
 		if (!isset($GLOBALS["ez-backup"]["settings"]["backup_db"]["daily"]) || !is_numeric($GLOBALS["ez-backup"]["settings"]["backup_db"]["daily"]))
 			$GLOBALS["ez-backup"]["settings"]["backup_db"]["daily"] = 0;
-		if (isset($_REQUEST["ez-backup-settings"]["backup_db"]["daily"]) && is_numeric($_REQUEST["ez-backup-settings"]["backup_db"]["daily"]) && ($_REQUEST["ez-backup-settings"]["backup_db"]["daily"] != $GLOBALS["ez-backup"]["settings"]["backup_db"]["daily"])) {
+		$import_settings_array = get_option("ELISQLREPORTS_settings_array", array());
+		if (isset($_REQUEST["ez-backup-settings"]["backup_db"]["daily"]) && is_numeric($_REQUEST["ez-backup-settings"]["backup_db"]["daily"])) {
 			if ($GLOBALS["ez-backup"]["settings"]["backup_db"]["daily"] = intval($_REQUEST["ez-backup-settings"]["backup_db"]["daily"])) {
 				if (!wp_next_scheduled('ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily')))
 					wp_schedule_event(time(), 'daily', 'ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily'));
+				if (isset($import_settings_array["daily_backup"]) && $import_settings_array["daily_backup"])
+					$import_settings_array["daily_backup"] = 0;
+				while (wp_next_scheduled('ELISQLREPORTS_daily_backup', array("Y-m-d-H-i-s", 'daily')))
+					wp_clear_scheduled_hook('ELISQLREPORTS_daily_backup', array("Y-m-d-H-i-s", 'daily'));
 			} elseif (wp_next_scheduled('ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily')))
 				wp_clear_scheduled_hook('ezbackup_db_daily', array("Y-m-d-H-i-s", 'daily'));
 		}
 		if (!isset($GLOBALS["ez-backup"]["settings"]["backup_db"]["hourly"]) || !is_numeric($GLOBALS["ez-backup"]["settings"]["backup_db"]["hourly"]))
 			$GLOBALS["ez-backup"]["settings"]["backup_db"]["hourly"] = 0;
-		if (isset($_REQUEST["ez-backup-settings"]["backup_db"]["hourly"]) && is_numeric($_REQUEST["ez-backup-settings"]["backup_db"]["hourly"]) && ($_REQUEST["ez-backup-settings"]["backup_db"]["hourly"] != $GLOBALS["ez-backup"]["settings"]["backup_db"]["hourly"])) {
+		if (isset($_REQUEST["ez-backup-settings"]["backup_db"]["hourly"]) && is_numeric($_REQUEST["ez-backup-settings"]["backup_db"]["hourly"])) {
 			if ($GLOBALS["ez-backup"]["settings"]["backup_db"]["hourly"] = intval($_REQUEST["ez-backup-settings"]["backup_db"]["hourly"])) {
 				if (!wp_next_scheduled('ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly')))
 					wp_schedule_event(time(), 'hourly', 'ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly'));
+				if (isset($import_settings_array["hourly_backup"]) && $import_settings_array["hourly_backup"])
+					$import_settings_array["hourly_backup"] = 0;
+				while (wp_next_scheduled('ELISQLREPORTS_hourly_backup', array("Y-m-d-H-i-s", 'hourly')))
+					wp_clear_scheduled_hook('ELISQLREPORTS_hourly_backup', array("Y-m-d-H-i-s", 'hourly'));
 			} elseif (wp_next_scheduled('ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly')))
 				wp_clear_scheduled_hook('ezbackup_db_hourly', array("Y-m-d-H-i-s", 'hourly'));
 		}
+		if (isset($import_settings_array["hourly_backup"]) && $import_settings_array["hourly_backup"] === 0 && isset($import_settings_array["daily_backup"]) && $import_settings_array["daily_backup"] === 0)
+			update_option("ELISQLREPORTS_settings_array", $import_settings_array);
 		if (isset($_POST["ez-backup-settings"]["backup_email"]) && (trim($_POST["ez-backup-settings"]["backup_email"]) != $GLOBALS["ez-backup"]["settings"]["backup_email"]))
 			$GLOBALS["ez-backup"]["settings"]["backup_email"] = trim($_POST["ez-backup-settings"]["backup_email"]);
 		elseif (!isset($GLOBALS["ez-backup"]["settings"]["backup_email"]) || !strlen(trim($GLOBALS["ez-backup"]["settings"]["backup_email"])))
 			$GLOBALS["ez-backup"]["settings"]["backup_email"] = "";
-		update_option("ez-backup-settings", $GLOBALS["ez-backup"]["settings"]);
 		$db_opts = '<form name="settingsForm" method="post" action="'.$GLOBALS["ez-backup"]["url"].'"><table width="100%" border=0><tr><td width="1%" valign="top">Backup&nbsp;Method:</td><td width="99%">';
 		foreach (array("Auto-detect", "Command Line (mysqldump)", "PHP (mysql_query)") as $mg => $backup_method)
 			$db_opts .= '<div style="float: left; padding: 0 24px 8px 0;"><input type="radio" name="ez-backup-settings[backup_method]" value="'.$mg.'"'.($GLOBALS["ez-backup"]["settings"]["backup_method"]==$mg?' checked':'').' />'.$backup_method.'</div>';
@@ -515,22 +501,23 @@ if (getWindowWidth(750) == 750)
 		$repair_tables = $wpdb->get_col("show full tables where Table_Type = 'BASE TABLE'");
 		if (is_array($repair_tables) && count($repair_tables))
 			$opts["REPAIR All Tables"] = array('REPAIR TABLE `'.implode('`, `', $repair_tables).'`');
-		$backupDB = get_option("ezbackup_BACKUP_DB", array("DB_NAME" => DB_NAME, "DB_HOST" => DB_HOST, "DB_USER" => DB_USER, "DB_PASSWORD" => DB_PASSWORD));
-		$restoreForm = '<form method="POST" id="restoreForm" name="restoreForm" action="'.$GLOBALS["ez-backup"]["url"].'"><div id="makerestore">'.ezbackup_link("X", "#restoreForm", "dismiss", "", ' onclick="showhide(\'admin-model-popup\');" style="float: right; color: #F00; overflow: hidden; width: 20px; height: 20px;"').'Restore to the following Database:<br />';
+		if (!(isset($GLOBALS["ez-backup"]["settings"]["DB_HOSTS"]) && is_array($GLOBALS["ez-backup"]["settings"]["DB_HOSTS"])))
+			$GLOBALS["ez-backup"]["settings"]["DB_HOSTS"][0] = get_option("ELISQLREPORTS_BACKUP_DB", array("DB_NAME" => DB_NAME, "DB_HOST" => DB_HOST, "DB_USER" => DB_USER, "DB_PASSWORD" => DB_PASSWORD));
+		$restoreForm = '<form method="POST" id="restoreForm" name="restoreForm" action="'.$GLOBALS["ez-backup"]["url"].'"><div id="makerestore">'.ezbackup_link("X", "#restoreForm", "dismiss", "", ' onclick="showhide(\'admin-model-popup\');" style="float: right; color: #F00; overflow: hidden; width: 20px; height: 20px;"').'<ol class="restore-steps"><li><span></span>Select a Database Backup File to Restore:</li><select id="ezbackup_dbdate" name="ez-backup[db_date]">';
+		$restoreFormEND = '<li><span></span>Enter the Credentials for the Database to be Restored:</li>';
 		$local = true;
-		foreach ($backupDB as $db_key => $db_value) {
-			$restoreForm .= '<div class="ez-backup-field-label">'.$db_key.':</div><input name="'.$db_key;
+		foreach ($GLOBALS["ez-backup"]["settings"]["DB_HOSTS"][0] as $db_key => $db_value) {
+			$restoreFormEND .= '<div class="ez-backup-field-label">'.$db_key.':</div><input name="'.$db_key;
 			if (isset($_POST[$db_key])) {
-				$backupDB[$db_key] = $_POST[$db_key];
-				$restoreForm .= '" readonly="true';
+				$GLOBALS["ez-backup"]["settings"]["DB_HOSTS"][0][$db_key] = $_POST[$db_key];
+				$restoreFormEND .= '" readonly="true';
 			}
-			$restoreForm .= '" value="'.$backupDB[$db_key].'"><br />';
-			if (constant($db_key) != $backupDB[$db_key])
+			$restoreFormEND .= '" value="'.$GLOBALS["ez-backup"]["settings"]["DB_HOSTS"][0][$db_key].'"><br style="clear:left" />';
+			if (constant($db_key) != $GLOBALS["ez-backup"]["settings"]["DB_HOSTS"][0][$db_key])
 				$local = false;
 		}
-		update_option("ezbackup_BACKUP_DB", $backupDB);
-		$restoreForm .= 'Warning: This '.($local?'is':'is NOT').' your currently active WordPress database conection info for this site.<br /><select id="ezbackup_dbdate" name="ez-backup[db_date]">';
-		$restoreFormEND = '<br /><input type="submit" value="Restore Selected Backup to Database"></div></form>';
+		update_option("ez-backup-settings", $GLOBALS["ez-backup"]["settings"]);
+		$restoreFormEND .= 'Warning: This '.($local?'<u>is</u>':'is <u>NOT</u>').' your currently active WordPress database conection info for this site.<br />';
 		if (isset($_REQUEST["ez-backup"]["db_date"]) && strlen($_REQUEST["ez-backup"]["db_date"])) {
 			if (isset($opts[$_REQUEST["ez-backup"]["db_date"]]) && is_array($opts[$_REQUEST["ez-backup"]["db_date"]])) {
 				foreach ($opts[$_REQUEST["ez-backup"]["db_date"]] as $MySQLexec) {
@@ -602,8 +589,8 @@ if (getWindowWidth(750) == 750)
 						echo "<div class='".($errors?"error":"updated")."'>Restore process executed MySQL with $errors error".($errors==1?'':'s').'!</div>';
 					}
 				} else {
-					$restoreForm .= '<option value="'.$_REQUEST["ez-backup"]["db_date"].'">RESTORE '.$_REQUEST["ez-backup"]["db_date"].'</option></select><h2 style="color: #F00;">Please Confirm</h2><input name="db_nonce" type="checkbox" value="'.wp_create_nonce($_REQUEST["ez-backup"]["db_date"]).'"> Yes, I understand that I will be completely erasing this database with my backup file.';
-					$restoreFormEND .= "\/<script>\nshowhide('admin-model-popup', true);\n</script>\n";
+					$restoreForm .= '<option value="'.$_REQUEST["ez-backup"]["db_date"].'">RESTORE '.$_REQUEST["ez-backup"]["db_date"].'</option></select>';
+					$restoreFormEND .= '<li style="color: #F00;"><span></span>Please Confirm</li><input name="db_nonce" type="checkbox" value="'.wp_create_nonce($_REQUEST["ez-backup"]["db_date"]).'"> Yes, I understand that I will be completely overwriting this database with the backup file.'."<script>\nshowhide('admin-model-popup', true);\n</script>\n";
 				}
 			} else
 				echo ezbackup_db2file($_REQUEST["ez-backup"]["db_date"]);
@@ -635,6 +622,7 @@ if (getWindowWidth(750) == 750)
 				$restoreForm .= "<option value=\"$entry\">$entry ($size)</option>";
 			$restoreForm .= '</select>';
 		}
+		$restoreFormEND .= '<li><span></span><input type="submit" value="Restore Selected Backup to Database"> <input type="button" value="Cancel the Restore" onclick="showhide(\'admin-model-popup\');"></li></ol></div></form>';
 		echo ezbackup_box("Database Backup Options", $db_opts.'<input type="submit" value="Save Settings" class="button-primary" style="float: right;"><br /></form>', "postbox", "admin-settings").ezbackup_box("Current Database Backups", "$files", "postbox", "menu")."</div></div></div><div id='admin-model-popup' style='display: none;'>$restoreForm$restoreFormEND</div>";
 	}
 

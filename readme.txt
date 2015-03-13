@@ -5,8 +5,8 @@ Author URI: http://wordpress.ieonly.com/category/my-plugins/
 Contributors: scheeeli
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7K3TSGPAENSGS
 Tags: sql, db, easy, mysql, cron, schedule, database, backup
-Stable tag: 4.15.10
-Version: 4.15.10
+Stable tag: 4.15.11
+Version: 4.15.11
 Requires at least: 2.6
 Tested up to: 4.1.1
 
@@ -16,7 +16,7 @@ Keep your database safe with scheduled backups. Multiple option for off-site bac
 
 Your database can be automatically saved and archived every hour and/or every day, and backups can be emailed to the address you specify. You can also restore the data to your WP DB or an external DB, which makes copying your database to another server and easy task.
 
-Updated March-11th
+Updated March-13th
 
 == Installation ==
 
@@ -35,10 +35,17 @@ Just setup how often you want to backup and how many backups to archive in EZ Ba
 
 == Changelog ==
 
+= 4.15.11 =
+* Added feature to import backup setting from my SQL Reports plugin.
+* Added plugin update link when update is available.
+
 = 4.15.10 =
 * Created database backup plugin.
 
 == Upgrade Notice ==
+
+= 4.15.11 =
+Added feature to import backup setting from my SQL Reports pluginm and a link to update the plugin when an update is available.
 
 = 4.15.10 =
 Created database backup plugin.
